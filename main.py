@@ -1,4 +1,5 @@
 from services.audio import transcribe_audio
+from services.images import fetch_images_for_transcription
 from fastapi import FastAPI, UploadFile, File, HTTPException, BackgroundTasks
 from database import engine, create_db_and_tables, SessionDep
 from models import AudioProject
@@ -79,3 +80,13 @@ def run_transcription_pipeline(project_id: int, file_path: str):
             
             session.add(project) # Prepare the update
             session.commit()     # Save the words to Supabase forever
+
+            """
+            No lets pass the project ID and the transcribed text to the image fetching function. This will go to Pexels, find relevant images, and save them to our hard drive.
+            """
+            fetch_images_for_transcription(project.id, project.transcription)
+
+            #Now lets update the status so we knwo when the images are done!!
+            project.status = "Images Ready"
+            session.add(project)
+            session.commit()
