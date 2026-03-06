@@ -11,7 +11,7 @@ def transcribe_audio(file_path: str):
         # We give it 3 arguments
         transcription = client.audio.transcriptions.create(
             file=(file_path, file.read()),# send the file name and the data
-            model = "whisper-large-v3-turbo",#the free model anme
+            model = "whisper-large-v3-turbo",#the free model name
             response_format="text",#we just want raw text back
              language = "en",
              temperature=0.0, #Keeps it focused no "creativity"

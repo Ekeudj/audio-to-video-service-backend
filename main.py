@@ -82,7 +82,7 @@ def run_transcription_pipeline(project_id: int, file_path: str):
             session.commit()     # Save the words to Supabase forever
 
             """
-            No lets pass the project ID and the transcribed text to the image fetching function. This will go to Pexels, find relevant images, and save them to our hard drive.
+            Now lets pass the project ID and the transcribed text to the image fetching function. This will go to Pexels, find relevant images, and save them to our hard drive.
             """
             fetch_images_for_transcription(project.id, project.transcription)
 
