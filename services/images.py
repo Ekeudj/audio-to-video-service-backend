@@ -17,7 +17,7 @@ def extract_search_keyword(sentence: str):
     """
     try:
         response = groq_client.chat.completions.create(
-            model="llama-3.1-8b-instant"
+            model="llama-3.1-8b-instant",
             messages=[
                 {
                    "role": "system",

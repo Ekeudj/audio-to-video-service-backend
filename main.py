@@ -17,6 +17,57 @@ def on_startup():
 def root():
     return{"message":"We're live!!"}
 
+# This runs "off-screen". The user doesn't see this happening.
+def run_transcription_pipeline(project_id: int, file_path: str):
+    
+    # Step 1: Open a fresh connection to the database
+    # (Since this is a separate task, it needs its own connection)
+    with Session(engine) as session:
+        # We wrap everything in a 'try' block to catch errors
+        try:
+            # Step 2: Send the file to Groq (The AI)
+            # This is where the audio turns into text
+            text = transcribe_audio(file_path)
+
+            # Step 3: Find that specific project in Supabase using the ID
+            project = session.get(AudioProject, project_id)
+            
+            # Step 4: If we found it, update the info!
+            if project:
+                # We update the status to 'Transcribing' while we work
+                project.status = "Transcribing"
+                session.add(project)
+                session.commit()
+
+                project.transcription = text # Fill in the empty transcription column
+                project.status = "Transcribed" # Change status from "uploaded" to "Transcribed"
+                
+                session.add(project) # Prepare the update
+                session.commit()     # Save the words to Supabase forever
+
+                """
+                Now lets pass the project ID and the transcribed text to the image fetching function. 
+                This will go to Pexels, find relevant images, and save them to our hard drive.
+                """
+                fetch_images_for_transcription(project.id, project.transcription)
+
+                # Now lets update the status so we know when the images are done!!
+                project.status = "Images Ready"
+                session.add(project)
+                session.commit()
+
+        except Exception as e:
+            # If ANY of the above steps fail, we catch the error here
+            print(f"CRITICAL ERROR in pipeline: {e}")
+            
+            # We try to tell the database exactly where it failed
+            project = session.get(AudioProject, project_id)
+            if project:
+                project.status = "Failed"
+                session.add(project)
+                session.commit()
+
+
 # @app.post tells FastAPI this is a "Sending" route (User -> Server)
 # '/upload' is the URL address where the user sends the file
 @app.post('/upload')
@@ -59,34 +110,3 @@ async def upload_audio(
 
 
 
-# This runs "off-screen". The user doesn't see this happening.
-def run_transcription_pipeline(project_id: int, file_path: str):
-    
-    # Step 1: Open a fresh connection to the database
-    # (Since this is a separate task, it needs its own connection)
-    with Session(engine) as session:
-        
-        # Step 2: Send the file to Groq (The AI)
-        # This is where the audio turns into text
-        text = transcribe_audio(file_path)
-
-        # Step 3: Find that specific project in Supabase using the ID
-        project = session.get(AudioProject, project_id)
-        
-        # Step 4: If we found it, update the info!
-        if project:
-            project.transcription = text # Fill in the empty transcription column
-            project.status = "Transcribed" # Change status from "uploaded" to "Transcribed"
-            
-            session.add(project) # Prepare the update
-            session.commit()     # Save the words to Supabase forever
-
-            """
-            Now lets pass the project ID and the transcribed text to the image fetching function. This will go to Pexels, find relevant images, and save them to our hard drive.
-            """
-            fetch_images_for_transcription(project.id, project.transcription)
-
-            #Now lets update the status so we know when the images are done!!
-            project.status = "Images Ready"
-            session.add(project)
-            session.commit()
