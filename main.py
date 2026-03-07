@@ -86,7 +86,7 @@ def run_transcription_pipeline(project_id: int, file_path: str):
             """
             fetch_images_for_transcription(project.id, project.transcription)
 
-            #Now lets update the status so we knwo when the images are done!!
+            #Now lets update the status so we know when the images are done!!
             project.status = "Images Ready"
             session.add(project)
             session.commit()
