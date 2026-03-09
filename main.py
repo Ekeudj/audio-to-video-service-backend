@@ -1,3 +1,4 @@
+from services.video_creator import create_video_from_images
 from services.audio import transcribe_audio
 from services.images import fetch_images_for_transcription
 from fastapi import FastAPI, UploadFile, File, HTTPException, BackgroundTasks
@@ -55,6 +56,16 @@ def run_transcription_pipeline(project_id: int, file_path: str):
                 project.status = "Images Ready"
                 session.add(project)
                 session.commit()
+
+                #Crucial step 3 Creating thw video with moviepy
+                image_folder = f"downloads/project_{project.id}_images"
+                create_video_from_images(project.id, project.file_path, image_folder)
+
+                #final status update to let us know everything is done
+                project.status = "Video Ready!"
+                session.add(project)
+                session.commit()
+                
 
         except Exception as e:
             # If ANY of the above steps fail, we catch the error here

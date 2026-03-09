@@ -12,7 +12,14 @@ def create_video_from_images(project_id: int, audio_path: str,image_folder: str)
 
     #step mbili: get all images and sort them like which comes after which you get?
     #We use a lambda to sure test 10 doesnt come before test 2
+
+    #Here we're basically saying "Go to the image folder, find all the .jpg files, and make a list of their paths. 
     image_files = [os.path.join(image_folder, f) for f in os.listdir(image_folder) if f.endswith('.jpg')]
+
+    #the .stort tells the ;ist to rearrange itself
+    #the key= tells python to follow a specific rule of sorting wjere lamda is the function of choice
+    #the x reprents a single filepath, ,split("_")breaks e.g test_12.jpg into "text":"12.jpg"
+    # the -1 takes the last one which is "12.jpg", then we split it agin at the dot with spliy(".") then we take 0 for the first you get?
     image_files.sort(key=lambda x: int(x.split('_')[-1].split('.')[0]))
 
     if not image_files:
