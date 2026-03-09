@@ -1,5 +1,6 @@
 import os
-from moviepy.editor import ImageClip, concatenate_videoclips, AudioFileClip
+from moviepy import ImageClip, concatenate_videoclips, AudioFileClip
+
 
 def create_video_from_images(project_id: int, audio_path: str,image_folder: str):
     """
