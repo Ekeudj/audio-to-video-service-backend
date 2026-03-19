@@ -79,13 +79,13 @@ def fetch_images_for_transcription(project_id: int, text:str):
                         image_file_path = f"{output_dir}/test_{index}.jpg"
 
                 #Phase 6 save the image to the HD
-                    with open(image_file_path, "wb") as f:
-                        f.write(image_data_res.content)
+                        with open(image_file_path, "wb") as f:
+                            f.write(image_data_res.content)
 
-                    saved_files.append(image_file_path)
-                    print(f"Sucessfully saved image {index}")
-                else:
-                    print(f"No photos found for query: {query}")
+                        saved_files.append(image_file_path)
+                        print(f"Sucessfully saved image {index}")
+                    else:
+                        print(f"No photos found for query: {query}")
         except Exception as e:
             # This is the slow-internet safety net
             print(f"DEBUG: Skipping sentence {index} due to connection server error {e}")

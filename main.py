@@ -6,7 +6,7 @@ from database import engine, create_db_and_tables, SessionDep
 from models import AudioProject
 import shutil
 import os
-from sqlmodel import create_engine, Session, SQLModel
+from sqlmodel import Session
 
 app = FastAPI()
 
@@ -16,67 +16,74 @@ def on_startup():
 
 @app.get('/')
 def root():
-    return{"message":"We're live!!"}
+    return {"message": "We're live!!"}
 
 # This runs "off-screen". The user doesn't see this happening.
 def run_transcription_pipeline(project_id: int, file_path: str):
-    
+
     # Step 1: Open a fresh connection to the database
     # (Since this is a separate task, it needs its own connection)
     with Session(engine) as session:
+
         # We wrap everything in a 'try' block to catch errors
         try:
-            # Step 2: Send the file to Groq (The AI)
+            # Step 2: Find that specific project in Supabase using the ID
+            project = session.get(AudioProject, project_id)
+
+            # Step 3: If we found it, update the info!
+            if not project:
+                print(f"Project {project_id} not found. Aborting.")
+                return
+
+            # We update the status to 'Transcribing' while we work
+            project.status = "Transcribing"
+            session.add(project)
+            session.commit()
+
+            # Step 4: Send the file to Groq (The AI)
             # This is where the audio turns into text
             text = transcribe_audio(file_path)
 
-            # Step 3: Find that specific project in Supabase using the ID
-            project = session.get(AudioProject, project_id)
-            
-            # Step 4: If we found it, update the info!
-            if project:
-                # We update the status to 'Transcribing' while we work
-                project.status = "Transcribing"
-                session.add(project)
-                session.commit()
+            project.transcription = text # Fill in the empty transcription column
+            project.status = "Transcribed" # Change status from "uploaded" to "Transcribed"
 
-                project.transcription = text # Fill in the empty transcription column
-                project.status = "Transcribed" # Change status from "uploaded" to "Transcribed"
-                
-                session.add(project) # Prepare the update
-                session.commit()     # Save the words to Supabase forever
+            session.add(project) # Prepare the update
+            session.commit()     # Save the words to Supabase forever
 
-                """
-                Now lets pass the project ID and the transcribed text to the image fetching function. 
-                This will go to Pexels, find relevant images, and save them to our hard drive.
-                """
-                fetch_images_for_transcription(project.id, project.transcription)
+            """
+            Now lets pass the project ID and the transcribed text to the image fetching function. 
+            This will go to Pexels, find relevant images, and save them to our hard drive.
+            """
+            fetch_images_for_transcription(project.id, project.transcription)
 
-                # Now lets update the status so we know when the images are done!!
-                project.status = "Images Ready"
-                session.add(project)
-                session.commit()
+            # Now lets update the status so we know when the images are done!!
+            project.status = "Images Ready"
+            session.add(project)
+            session.commit()
 
-                #Crucial step 3 Creating thw video with moviepy
-                image_folder = f"downloads/project_{project.id}_images"
-                create_video_from_images(project.id, project.file_path, image_folder)
+            #Crucial step 3 Creating thw video with moviepy
+            image_folder = f"downloads/project_{project.id}_images"
+            create_video_from_images(project.id, project.file_path, image_folder)
 
-                #final status update to let us know everything is done
-                project.status = "Video Ready!"
-                session.add(project)
-                session.commit()
-                
+            #final status update to let us know everything is done
+            project.status = "Video Ready!"
+            session.add(project)
+            session.commit()
 
         except Exception as e:
             # If ANY of the above steps fail, we catch the error here
             print(f"CRITICAL ERROR in pipeline: {e}")
-            
+
             # We try to tell the database exactly where it failed
-            project = session.get(AudioProject, project_id)
-            if project:
-                project.status = "Failed"
-                session.add(project)
-                session.commit()
+            try:
+                with Session(engine) as error_session:
+                    project = error_session.get(AudioProject, project_id)
+                    if project:
+                        project.status = "Failed"
+                        error_session.add(project)
+                        error_session.commit()
+            except Exception as db_err:
+                print(f"Also failed to update status to Failed: {db_err}")
 
 
 # @app.post tells FastAPI this is a "Sending" route (User -> Server)
@@ -90,11 +97,19 @@ async def upload_audio(
     # UploadFile is a special FastAPI container for the audio data
     file: UploadFile = File(...)
     ):
-    
+
+    # 0. Validate the file type before doing anything else
+    allowed_extensions = {".mp3", ".wav", ".m4a", ".ogg", ".flac", ".webm"}
+    file_ext = os.path.splitext(file.filename)[1].lower()
+    if file_ext not in allowed_extensions:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Unsupported file type '{file_ext}'. Allowed: {allowed_extensions}"
+        )
+
     # 1. Prepare the folder on your PC
     upload_dir = "uploads"
-    if not os.path.exists(upload_dir):
-        os.makedirs(upload_dir) # Creates the folder if you don't have it
+    os.makedirs(upload_dir, exist_ok=True) # Creates the folder if you don't have it
 
     # 2. Create the full path (e.g., "uploads/my_voice.mp3")
     file_location = f"{upload_dir}/{file.filename}"
@@ -120,4 +135,16 @@ async def upload_audio(
     return {"message": "Uploaded successful! Transcription started.", "project_id": new_project.id}
 
 
-
+@app.get('/status/{project_id}')
+def get_status(project_id: int, session: SessionDep):
+    # Lets us check where in the pipeline a project currently is
+    # Poll this from the frontend to know when the video is ready
+    project = session.get(AudioProject, project_id)
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+    return {
+        "project_id": project.id,
+        "title": project.title,
+        "status": project.status,
+        "has_transcription": project.transcription is not None,
+    }
