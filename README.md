@@ -14,7 +14,7 @@ Currently, the engine handles the heavy lifting "off-screen":
 4. **Visual Sourcing:** Automatically queries the **Pexels API** for high-quality, relevant images.
 5. **Production:** **MoviePy** stitches the images and original audio into a final `.mp4`.
 
-## 🛠️ Tech Stack
+##  Tech Stack
 
 - **Backend:** [FastAPI](https://fastapi.tiangolo.com) (Asynchronous & Fast)
 - **AI Models:** Groq (Whisper + Llama 3.1)
@@ -22,7 +22,7 @@ Currently, the engine handles the heavy lifting "off-screen":
 - **Media Engine:** MoviePy & Pexels API
 - **Language:** Python 3.12.9
 
-## 🚦 Status: #BuildInPublic
+##  Status: #BuildInPublic
 
 This project is a 6-year procrastination dream finally turned into code.
 
@@ -41,7 +41,7 @@ This project is a 6-year procrastination dream finally turned into code.
 5. **MoviePy**: Stitches everything into a synced `.mp4` video.
 
 
-## 🚀 Getting Started (For Testers)
+##  Getting Started (For Testers)
 
 Want to try it out? Follow these steps:
 
